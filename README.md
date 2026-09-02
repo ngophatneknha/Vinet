@@ -2,7 +2,16 @@
 
 Ứng dụng kiểm duyệt dữ liệu và gán nhãn ảnh–văn bản cho nhóm ViNewsCLIPpings. Chạy trên **Next.js + Netlify**, lưu mã nguồn ở GitHub.
 
-## Sửa trên GitHub và tự cập nhật website
+## Dự án đang sử dụng
+
+- Website: https://vinet-studio.netlify.app
+- Mã nguồn: https://github.com/ngophatneknha/Vinet
+- Quản lý deploy: https://app.netlify.com/projects/vinet-studio/deploys
+- Nhánh phát hành: `main`. Netlify đã liên kết repository; không cần tạo lại project.
+
+Sửa file trên GitHub, chọn **Commit changes** vào `main`, rồi xem tiến trình tại trang deploy. Chỉ bản build thành công mới thay website đang chạy. Bộ raw được nhập riêng sau khi đăng nhập quản trị; không nằm trong GitHub.
+
+## Cấu hình khi dựng lại dự án
 
 1. Trong Netlify, chọn **Add new project → Import an existing project → GitHub → ngophatneknha/Vinet**.
 2. Chọn nhánh **main**, thư mục gốc để trống. `netlify.toml` đã khai báo lệnh build `npm run build:netlify` và thư mục xuất `.next`.
