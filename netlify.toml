@@ -6,7 +6,11 @@
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
 
-# Netlify automatically installs its supported Next.js adapter.
+# Explicitly enable the adapter for projects linked through the API as well as UI.
+# Netlify installs the current supported version during the build.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 # Enable Netlify Database and Identity in the dashboard before the first build.
 [[headers]]
   for = "/api/*"
