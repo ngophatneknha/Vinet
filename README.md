@@ -1,46 +1,81 @@
-# ViNews Studio
+# Vinet · ViNews Studio
 
-Ứng dụng cho ViNewsCLIPpings: duyệt raw → gom sự kiện → tạo cặp → hai lượt gán nhãn độc lập → kiểm định → xuất kết quả.
+Ứng dụng kiểm duyệt dữ liệu và gán nhãn ảnh–văn bản cho nhóm ViNewsCLIPpings. Chạy trên **Next.js + Netlify**, lưu mã nguồn ở GitHub.
 
-## Vận hành
+## Sửa trên GitHub và tự cập nhật website
 
-1. Chủ dự án đăng nhập bằng email cấu hình `OWNER_EMAIL`, được cấp quyền điều phối viên một lần. Thêm email của nhóm ở **Thành viên**. Thao tác này không gửi email mời.
-2. **Nhập dữ liệu**: chọn `manifest_import_25000.jsonl.gz` và thư mục `images`. Manifest được đọc từng dòng; bốn ảnh tải đồng thời. Chạy lại bỏ qua bản đã nhập. Không đưa kho ảnh lên Git hoặc thư mục public.
-3. Dashboard hiển thị số bài/ảnh thực sự có trong D1/R2. Chỉ bài đủ ảnh trên kho dùng chung mới được giao. Metadata đã nhập không đồng nghĩa ảnh đã tải đủ.
-4. Mỗi người **Duyệt raw**: đối chiếu bài gốc, tất cả ảnh, caption, loại ảnh, lý do và kết luận. Lưu nháp trước khi nghỉ. Gửi xong khóa kết quả.
-5. 305 mã bài thiếu ảnh từ báo cáo 02/09/2026 được tích hợp phía máy chủ. Không thể duyệt đạt vòng đầu. Điều phối viên nhập manifest phục hồi với **Bổ sung ảnh** để thêm ảnh vào bài chờ/đang kiểm định, không ghi đè nguồn. Người kiểm định khác người duyệt ban đầu xác nhận đủ ảnh và ghi bằng chứng.
-6. Nhóm tiền xử lý gom sự kiện theo tài liệu. Điều phối viên gán `event_id` cho bài đã duyệt, tạo đợt pilot và nhập cặp JSONL gồm `article_id`, `image_id`. Không suy nhãn từ cặp cùng bài.
-7. Mỗi cặp có hai người khác nhau, giữ kín kết quả trước khi gửi. Sáu câu lấy nguyên văn Guideline V2. Ghi 0/1/2 từng câu, lý do và URL bằng chứng cho nhãn chính.
-8. Hai nhãn chính giống nhau được chốt đồng thuận. Mọi bất đồng và nhãn phụ vào hàng đợi kiểm định. Người thứ ba kết luận; hai phiếu ban đầu được giữ nguyên.
-9. Điều phối viên có thể tạm dừng đợt, thu hồi bản nháp kèm lý do, khóa thành viên và xuất JSONL raw/cặp/nhật ký.
+1. Trong Netlify, chọn **Add new project → Import an existing project → GitHub → ngophatneknha/Vinet**.
+2. Chọn nhánh **main**, thư mục gốc để trống. `netlify.toml` đã khai báo lệnh build `npm run build:netlify` và thư mục xuất `.next`.
+3. Bật **Netlify Database** cho dự án, bật **Identity**, đặt biến môi trường `OWNER_EMAIL` bằng email của điều phối viên. Database được Netlify cung cấp riêng; không dán connection string vào mã nguồn.
+4. Trong Identity, giữ xác nhận email, bật Google/GitHub nếu muốn. Người đăng ký mới chưa được xem dữ liệu cho đến khi điều phối viên thêm đúng email vào danh sách thành viên.
+5. Chạy deploy. Nếu lần build đầu chưa có Database, bật Database rồi chọn Retry deploy. Migration được áp dụng trước khi phát hành mã và không tự xóa dữ liệu.
+6. Đăng nhập bằng email `OWNER_EMAIL`: hệ thống cấp quyền điều phối viên lần đầu. Thêm thành viên, nhập dữ liệu và mở đợt pilot.
 
-## Tổ chức nhóm
+Sau khi liên kết repository, sửa file bằng nút bút chì trên GitHub hoặc nhấn `.` để mở github.dev, rồi **Commit changes** vào `main`. Netlify tự build và phát hành thay đổi. GitHub Actions chạy kiểm tra mã và nghiệp vụ trên mỗi push/PR. Với thay đổi lớn, dùng branch + Pull Request để xem Deploy Preview trước khi merge.
 
-Gợi ý 6 người: 1 điều phối viên, 3 người gán nhãn và 2 người kiểm định. Mọi vai trò có thể làm lượt độc lập; người kiểm định chỉ xử lý cặp mình chưa gửi nhãn. Pilot 300–500 cặp trước đợt chính. Rà soát ca biên hằng tuần.
+**Chạy ứng dụng trong GitHub:** dùng **Code → Codespaces → Create codespace**, rồi `npm run dev`. github.dev là trình chỉnh sửa, không phải máy chủ chạy ứng dụng. Các chức năng dữ liệu/đăng nhập cần Netlify Dev hoặc cấu hình dịch vụ tương ứng; không có tài khoản hay dữ liệu giả được tự cấp quyền khi chạy local.
 
-Độ khó tạm: tổng sáu điểm 0–12; 0–3 dễ, 4–7 trung bình, 8–12 khó. Tính lại phân vị 33/34/33 sau pilot và cập nhật quy tắc; không xem mốc tạm là ngưỡng đã hiệu chỉnh.
+## Dữ liệu và tài khoản
 
-## Giới hạn và sao lưu
+- GitHub lưu mã nguồn và cấu hình, không chứa 25.000 bài raw, khoảng 24 GB ảnh, khóa API hoặc mật khẩu.
+- Netlify Database (PostgreSQL) lưu bài báo, quyết định, phân công, phiếu gán nhãn và nhật ký.
+- Netlify Blobs lưu ảnh trong store riêng `vinews-images`; không đặt ảnh vào `public/`. API kiểm tra thành viên trước khi đọc.
+- Netlify Identity xác thực người dùng; quyền ứng dụng được kiểm tra lại từ database ở mỗi yêu cầu. Header nhận diện của Sites/ChatGPT không còn được tin cậy.
+- Dữ liệu trên Sites cũ không tự chuyển sang Netlify. Nhập bộ raw qua mục **Nhập dữ liệu** sau khi cấu hình dịch vụ. Nếu đã có phiếu gán nhãn trên Sites cũ, cần xuất và chuyển các phiếu riêng trước khi sử dụng chính thức.
 
-- Ứng dụng lưu kiểm duyệt, không tự chứng nhận 25.000 bài đạt QC. Nhóm vẫn phải lấy 50–100 bài/nguồn và đo ngưỡng SOP.
-- Chưa tự gom cụm hoặc chia tập. Xuất giữ `split=null`, `test_reviewed=false`. Trước benchmark kiểm tra rò rỉ sự kiện/cụm ảnh và kiểm tra thủ công 100% test.
-- Ba nhãn phụ giữ riêng, `benchmark_eligible=false`. Hai nhãn chính đã chốt chỉ đủ điều kiện nhãn, chưa có nghĩa đã đủ điều kiện chia tập.
-- Truy cập Internet có hai lớp: quyền Site và danh sách thành viên ứng dụng. Nếu chủ dự án duyệt Site public thì trang đăng nhập được mở; dữ liệu vẫn cần thành viên được cấp quyền.
-- Giữ bản gốc trên D. Xuất ba loại JSONL định kỳ. Bản xuất nhãn không thay thế bản sao kho ảnh.
-- `IMPORT_TOKEN` tùy chọn chỉ nhập dữ liệu, không đọc ảnh/nhãn và không vượt lớp quyền Sites. Nhập bằng trình duyệt đang đăng nhập không cần token.
+### Nhập raw
 
-## Phát triển và kiểm tra
+Chọn `manifest_import_25000.jsonl.gz` đã kèm cờ kiểm tra và thư mục `images` từ máy đang giữ bộ dữ liệu. Nếu dùng manifest gốc, chọn thêm danh sách bài thiếu kho ảnh. Chỉ bài có đủ ảnh trên kho mới được giao duyệt.
 
-Node >=22.13, `npm ci`, `npm run db:generate` sau thay đổi schema, `npm run build`. D1 dùng prepared statements; R2 lưu ảnh theo SHA-256; migration nằm trong `drizzle/`. Không tạo schema trong request.
+Mỗi ảnh được chia thành phần tối đa **4 MB** để phù hợp giới hạn upload của Netlify Functions. Máy chủ ghép lại, kiểm tra định dạng và SHA-256, rồi mới ghi trạng thái sẵn sàng. Giới hạn ảnh 20 MB phù hợp bộ raw hiện tại (ảnh lớn nhất khoảng 19,9 MB). Nếu gián đoạn, chọn lại tệp và tiếp tục; bài và ảnh đã hoàn tất được bỏ qua. Giữ tab mở khi nhập/xuất dữ liệu.
 
-Harness riêng, chỉ ở local port 3001:
+305 bài đang thiếu kho ảnh bị chặn duyệt đạt ở vòng đầu. Điều phối viên có thể nhập bổ sung ảnh vào bài chưa giao/đang kiểm định. Người kiểm định phải đối chiếu đầy đủ, kiểm tra số ảnh còn thiếu và ghi bằng chứng trước khi duyệt đạt.
 
+### Quy trình nhóm
+
+1. Duyệt bài và từng ảnh: giữ/loại/cần kiểm tra, loại ảnh, caption và lý do.
+2. Nhóm tiền xử lý xác minh sự kiện; điều phối viên gán `event_id` cho bài đã duyệt.
+3. Tạo đợt pilot 300–500 cặp, nhập JSONL `{ "article_id": "…", "image_id": "…" }` từ các bài/ảnh đã duyệt.
+4. Hai người khác nhau gán nhãn độc lập, trả lời sáu câu theo Guideline V2, chấm 0/1/2 và ghi URL bằng chứng.
+5. Hai nhãn chính giống nhau được chốt đồng thuận. Bất đồng và nhãn phụ chuyển người thứ ba kiểm định. Giữ nguyên hai phiếu ban đầu.
+6. Xuất raw, cặp/nhãn và nhật ký theo từng trang để tránh giới hạn thời gian/dung lượng của Functions. Mốc độ khó 0–3/4–7/8–12 là tạm, cần hiệu chỉnh sau pilot.
+
+Gợi ý 6 người: 1 điều phối viên, 3 người gán nhãn và 2 người kiểm định. Thu hồi bản nháp khi cần phân công lại; phiếu đã gửi không ghi đè.
+
+**Chưa phải benchmark đã chứng nhận:** vẫn cần QC 50–100 bài/nguồn theo SOP, kiểm tra rò rỉ sự kiện/cụm ảnh giữa train/val/test và kiểm tra thủ công 100% test. File xuất giữ `split=null`, `test_reviewed=false`. Chỉ hai nhãn chính được đánh dấu đủ điều kiện nhãn; ba nhãn phụ lưu riêng.
+
+## Phát triển
+
+Node 22 trở lên:
+
+```sh
+npm ci
+npm run dev
+npm run typecheck
+npm test
+npm run build
 ```
-npx wrangler d1 migrations apply DB --local --config wrangler.local.jsonc --persist-to .wrangler/test-state
-npx wrangler dev --config dist/server/wrangler.json --port 3001 --ip 127.0.0.1 --persist-to .wrangler/test-state --var OWNER_EMAIL:test-owner@example.test
-python scripts/test_workflow.py
-```
 
-Harness mô phỏng header danh tính của dispatcher, chỉ local. Không mở trực tiếp Worker local lên Internet. Dev server Sites tự loại header giả và dùng tài khoản thử riêng.
+`npm test` chạy PostgreSQL bằng PGlite trong bộ nhớ: migration, khóa nhiệm vụ, ràng buộc hai người, rollback, chuyển bất đồng, bất biến phiếu; thêm kiểm tra câu hỏi, bằng chứng và toàn vẹn ảnh lớn. Không chạy test vào database production.
 
-Đã kiểm tra HTTP với Worker/D1/R2 local: quyền truy cập, CSRF, SHA ảnh, nhận đồng thời, lưu nháp, phiếu bất biến, hai slot, bất đồng, người thứ ba, xuất nguyên bản và khóa tài khoản. Chưa kiểm tra giao diện bằng trình duyệt. Hai công cụ WebMCP đọc tiến độ/mở hướng dẫn chưa được xác minh ở môi trường hỗ trợ; không có công cụ tự gán nhãn.
+Khi đổi schema: sửa `db/schema.ts`, chạy `npm run db:generate`, kiểm tra SQL mới trong `db/migrations/` rồi commit. Không sửa migration đã chạy. Netlify build gọi `scripts/migrate.mjs`, dùng transaction và khóa để ngăn hai deploy áp dụng migration đồng thời.
+
+Để chạy đầy đủ dịch vụ local, dùng Netlify CLI với dự án đã liên kết (`netlify dev`) hoặc cấu hình PostgreSQL phát triển riêng. Không đưa dữ liệu production vào Deploy Preview công khai. Kiểm tra chính sách nhánh database/Identity trước khi mời người ngoài.
+
+## Các file thường chỉnh
+
+| Nhu cầu | File |
+|---|---|
+| Giao diện trang làm việc | `app/studio/studio.tsx` |
+| Màu, bố cục, responsive | `app/globals.css` |
+| Đăng nhập | `app/login/page.tsx` |
+| Sáu câu, nhãn, độ khó | `lib/rules.ts` |
+| Quyền và xử lý nhiệm vụ | `app/api/work/route.ts`, `lib/server.ts` |
+| Schema database | `db/schema.ts` |
+| Cấu hình triển khai | `netlify.toml` |
+
+## Sao lưu và vận hành
+
+Giữ nguyên bộ raw trên ổ D. Xuất cả ba loại JSONL định kỳ, giữ bản sao ảnh riêng và dùng snapshot database khi cần. Chốt/tạm dừng đợt trong lúc xuất bản dữ liệu nghiên cứu để tránh thay đổi nhãn giữa các trang xuất. Kiểm tra hạn mức lưu trữ/băng thông Netlify cho khoảng 24 GB ảnh trước khi tải toàn bộ; mã nguồn không cam kết dung lượng này miễn phí.
+
+Tài liệu nền tảng: [Next.js trên Netlify](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/), [Database](https://docs.netlify.com/build/data-and-storage/netlify-database/api/), [Identity](https://docs.netlify.com/manage/security/secure-access-to-sites/identity/get-started/), [Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/).

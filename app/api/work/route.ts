@@ -1,11 +1,12 @@
-import {getChatGPTUser} from '@/app/chatgpt-auth';
+import {CLAIM_RAW,CLAIM_PAIR,RECONCILE_PAIR} from '@/lib/workflow-sql';
+import {getAppUser} from '@/lib/auth';
 import {agreement,validateAnnotation,LABELS,RAW_LABELS} from '@/lib/rules';
 import {db,stmt,one,all,run,now,uid,member,permit,json,fail,body,assert,AppError,logStmt,article,pairView,config,ensureOwner} from '@/lib/server';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){try{
  const url=new URL(req.url),action=url.searchParams.get('action')||'stats';
  if(action==='session'){
-  const u=await getChatGPTUser();if(!u)return json({user:null});await ensureOwner(u);
+  const u=await getAppUser();if(!u)return json({user:null});await ensureOwner(u);
   const m=await one('SELECT email,name,role,active FROM members WHERE email=?',u.email.toLowerCase());
   const setup=!(await one("SELECT key FROM settings WHERE key='setup_consumed'"));
   return json({user:u,member:m?.active?m:null,setup});
@@ -13,11 +14,11 @@ export async function GET(req:Request){try{
  const m=await member();
  if(action==='stats'){
   const groups=await all('SELECT status,COUNT(*) n FROM articles GROUP BY status');
-  const sources=await all('SELECT publisher,COUNT(*) n,SUM(status=\'approved\') done FROM articles GROUP BY publisher ORDER BY n DESC');
+  const sources=await all('SELECT publisher,COUNT(*) n,SUM(CASE WHEN status=\'approved\' THEN 1 ELSE 0 END) done FROM articles GROUP BY publisher ORDER BY n DESC');
   const counts=await one('SELECT COUNT(*) n,SUM(ready) ready FROM assets');
   const ps=await all('SELECT state,COUNT(*) n FROM pairs GROUP BY state');
   const quality=agreement(await all("SELECT a.label a,b.label b FROM annotations a JOIN annotations b ON a.pair_id=b.pair_id AND a.slot=1 AND b.slot=2 WHERE a.state='submitted' AND b.state='submitted'"));
-  const mine=await one("SELECT COUNT(*) n,SUM(state='submitted') done FROM annotations WHERE user_id=? AND state!='released'",m.user_id);
+  const mine=await one("SELECT COUNT(*) n,SUM(CASE WHEN state='submitted' THEN 1 ELSE 0 END) done FROM annotations WHERE user_id=? AND state!='released'",m.user_id);
   return json({groups,sources,assets:counts,pairs:ps,quality,mine,inventory:await one('SELECT COUNT(*) n FROM articles WHERE inventory_flag=1'),batches:await all('SELECT * FROM batches ORDER BY created DESC')});
  }
  if(action==='articles'){
@@ -55,7 +56,7 @@ function rawValidate(a:any,x:any){
 export async function POST(req:Request){try{
  const x=await body(req),action=x.action;
  if(action==='setup'){
-  const u=await getChatGPTUser();assert(u,'Đăng nhập trước khi kích hoạt.',401);
+  const u=await getAppUser();assert(u,'Đăng nhập trước khi kích hoạt.',401);
   assert(config().SETUP_CODE&&x.code===config().SETUP_CODE,'Mã kích hoạt không hợp lệ.',403);
   assert(!(await one("SELECT key FROM settings WHERE key='setup_consumed'")),'Đã có quản trị viên.',409);
   await db().batch([stmt("INSERT INTO members(email,user_id,name,role,active,created) SELECT ?,?,?,'admin',1,? WHERE NOT EXISTS(SELECT 1 FROM settings WHERE key='setup_consumed')",u.email.toLowerCase(),u.userId,u.fullName||u.email,now()),stmt("INSERT INTO settings VALUES ('setup_consumed',?)",now()),logStmt(u.userId,'bootstrap','owner')]);
@@ -64,7 +65,7 @@ export async function POST(req:Request){try{
  const m=await member();
  if(action==='raw_claim'){
   let a=await one("SELECT id FROM articles WHERE lease_user=? AND status='in_progress' LIMIT 1",m.user_id);
-  if(!a)a=await stmt("UPDATE articles SET status='in_progress',lease_user=? WHERE id=(SELECT a.id FROM articles a WHERE status='pending' AND EXISTS(SELECT 1 FROM images WHERE article_id=a.id) AND NOT EXISTS(SELECT 1 FROM images i JOIN assets s ON s.id=i.asset_id WHERE i.article_id=a.id AND s.ready=0) ORDER BY inventory_flag,id LIMIT 1) AND status='pending' RETURNING id",m.user_id).first();
+  if(!a)a=await stmt(CLAIM_RAW,m.user_id).first();
   if(a)await logStmt(m.user_id,'raw_claim',a.id).run();return json(a?await article(a.id):null);
  }
  if(action==='raw_save'||action==='raw_submit'){
@@ -78,12 +79,12 @@ export async function POST(req:Request){try{
    for(const i of x.review.images)qs.push(stmt(`UPDATE images SET decision=? WHERE id=? AND article_id=? AND ${guard}`,i.decision,i.id,a.id,a.id,m.user_id));
    qs.push(stmt("UPDATE articles SET status=?,lease_user=NULL WHERE id=? AND status='in_progress' AND lease_user=?",x.review.decision,a.id,m.user_id));
   }
-  qs.push(logStmt(m.user_id,action,a.id,{decision:x.review.decision}));const results=await db().batch(qs);assert(results[0].meta.changes,'Bản này đã gửi; không thể ghi đè.',409);return json({ok:true});
+  qs.push(logStmt(m.user_id,action,a.id,{decision:x.review.decision}));const results=await db().batch([stmt('SELECT id FROM articles WHERE id=? FOR UPDATE',a.id),...qs]);assert(results[1].meta.changes,'Bản này đã gửi; không thể ghi đè.',409);return json({ok:true});
  }
  if(action==='pair_claim'){
   let own=await one("SELECT pair_id FROM annotations WHERE user_id=? AND state='draft' ORDER BY updated LIMIT 1",m.user_id);
   if(!own){for(let i=0;i<3;i++){
-   try{own=await stmt("INSERT INTO annotations(id,pair_id,user_id,slot,state,payload,updated) SELECT ?,p.id,?,s.slot,'draft','{}',? FROM pairs p JOIN batches b ON b.id=p.batch_id CROSS JOIN (SELECT 1 slot UNION ALL SELECT 2) s WHERE p.state='open' AND b.active=1 AND NOT EXISTS(SELECT 1 FROM annotations a WHERE a.pair_id=p.id AND a.state!='released' AND (a.slot=s.slot OR a.user_id=?)) ORDER BY p.created,p.id,s.slot LIMIT 1 RETURNING pair_id",uid(),m.user_id,now(),m.user_id).first();break}catch(e){if(i===2)throw e}
+   try{own=await stmt(CLAIM_PAIR,uid(),m.user_id,now(),m.user_id).first();break}catch(e){if(i===2)throw e}
   }}
   if(own)await logStmt(m.user_id,'pair_claim',own.pair_id).run();return json(own?await pairView(own.pair_id,m):null);
  }
@@ -92,9 +93,10 @@ export async function POST(req:Request){try{
   let difficulty=null;if(action==='pair_submit'){try{difficulty=validateAnnotation(x.review).difficulty}catch(e:any){throw new AppError(400,e.message)}}
   const state=action==='pair_submit'?'submitted':'draft',p=JSON.stringify(x.review);assert(p.length<100000,'Nội dung quá lớn.');
   const results=await db().batch([
+   stmt("SELECT id FROM pairs WHERE id=? FOR UPDATE",x.id),
    stmt("UPDATE annotations SET state=?,payload=?,label=?,difficulty=?,updated=? WHERE id=? AND state='draft'",state,p,x.review.label||null,difficulty,now(),own.id),
-   stmt("UPDATE pairs SET state=CASE WHEN (SELECT COUNT(*) FROM annotations WHERE pair_id=pairs.id AND state='submitted')<2 THEN 'open' WHEN (SELECT COUNT(DISTINCT label) FROM annotations WHERE pair_id=pairs.id AND state='submitted')=1 AND (SELECT label FROM annotations WHERE pair_id=pairs.id AND state='submitted' LIMIT 1) IN ('matched','out_of_context') THEN 'approved' ELSE 'review' END,final_label=CASE WHEN (SELECT COUNT(*) FROM annotations WHERE pair_id=pairs.id AND state='submitted')=2 AND (SELECT COUNT(DISTINCT label) FROM annotations WHERE pair_id=pairs.id AND state='submitted')=1 AND (SELECT label FROM annotations WHERE pair_id=pairs.id AND state='submitted' LIMIT 1) IN ('matched','out_of_context') THEN (SELECT label FROM annotations WHERE pair_id=pairs.id AND state='submitted' LIMIT 1) ELSE NULL END WHERE id=? AND state='open'",x.id),logStmt(m.user_id,action,x.id)]);
-  assert(results[0].meta.changes,'Bản này đã gửi hoặc đã thu hồi.',409);return json({ok:true});
+   stmt(RECONCILE_PAIR,x.id),logStmt(m.user_id,action,x.id)]);
+  assert(results[1].meta.changes,'Bản này đã gửi hoặc đã thu hồi.',409);return json({ok:true});
  }
  if(action==='adjudicate'){
   permit(m,'admin','reviewer');assert(['raw','pair'].includes(x.kind),'Loại kiểm định không hợp lệ.');assert(typeof x.reason==='string'&&x.reason.trim().length>=10&&x.reason.length<10000,'Ghi lý do kiểm định từ 10 ký tự.');

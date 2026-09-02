@@ -40,3 +40,12 @@ next-env.d.ts
 /work/
 
 *.tsbuildinfo
+/.netlify/
+/data/
+/images/
+*.jsonl
+*.jsonl.gz
+*.sqlite
+*.sqlite3
+*.db
+*.tar.gz

@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build:netlify"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Netlify automatically installs its supported Next.js adapter.
+# Enable Netlify Database and Identity in the dashboard before the first build.
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "private, no-store"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"

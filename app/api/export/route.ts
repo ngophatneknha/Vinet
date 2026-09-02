@@ -1,14 +1,13 @@
 import {member,permit,all,json,fail,logStmt} from '@/lib/server';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){try{
- const m=await member();permit(m,'admin');const kind=new URL(req.url).searchParams.get('kind')||'pairs';
+ const m=await member();permit(m,'admin');const url=new URL(req.url),kind=url.searchParams.get('kind')||'pairs',after=url.searchParams.get('after')||'';
  if(!['pairs','raw','audit'].includes(kind))return json({error:'Loại xuất không hợp lệ'},400);
- await logStmt(m.user_id,'export',kind).run();
- const encoder=new TextEncoder();let after='';
- const stream=new ReadableStream({async pull(controller){try{
+ if(!after)await logStmt(m.user_id,'export',kind).run();
+ const exported:any[]=[];let bytes=0;
   const table=kind==='pairs'?'pairs':kind==='raw'?'articles':'audit';
-  const rows=await all(`SELECT * FROM ${table} WHERE id>? ORDER BY id LIMIT 100`,after);
-  if(!rows.length){controller.close();return}
+  const rows=await all(`SELECT * FROM ${table} WHERE id>? ORDER BY id LIMIT 25`,after);
+  if(!rows.length)return json({rows:[],nextCursor:null});
   for(const r of rows){
    if(kind==='pairs'){
     r.annotations=(await all('SELECT * FROM annotations WHERE pair_id=?',r.id)).map(a=>({...a,payload:JSON.parse(a.payload)}));
@@ -23,8 +22,9 @@ export async function GET(req:Request){try{
     r.reviews=(await all('SELECT * FROM raw_reviews WHERE article_id=?',r.id)).map(a=>({...a,payload:JSON.parse(a.payload)}));
     r.adjudications=(await all("SELECT * FROM adjudications WHERE entity_type='raw' AND entity_id=?",r.id)).map(a=>({...a,payload:JSON.parse(a.payload)}));
    }
-   controller.enqueue(encoder.encode(JSON.stringify(r)+'\n'));
-  }after=rows[rows.length-1].id;
- }catch(e){controller.error(e)}}});
- return new Response(stream,{headers:{'Content-Type':'application/x-ndjson; charset=utf-8','Content-Disposition':`attachment; filename="vinews_${kind}_${new Date().toISOString().slice(0,10)}.jsonl"`,'Cache-Control':'no-store'}});
+   const size=new TextEncoder().encode(JSON.stringify(r)).length;
+   if(exported.length&&bytes+size>2000000)break;
+   bytes+=size;exported.push(r);
+  }
+ return json({rows:exported,nextCursor:exported.length?exported[exported.length-1].id:null});
 }catch(e){return fail(e)}}

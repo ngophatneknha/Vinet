@@ -1,8 +1,9 @@
-import {env} from 'cloudflare:workers';
-import {getChatGPTUser} from '@/app/chatgpt-auth';
-export const db=()=>env.DB;
-export const files=()=>env.FILES;
-export const config=()=>env as unknown as Record<string,string>;
+import {getAppUser} from '@/lib/auth';
+import {database} from '@/lib/database';
+import {storage} from '@/lib/storage';
+export const db=()=>database;
+export const files=()=>storage;
+export const config=()=>process.env as Record<string,string>;
 export const now=()=>new Date().toISOString();
 export const uid=()=>crypto.randomUUID();
 export const stmt=(q:string,...v:any[])=>db().prepare(q).bind(...v);
@@ -21,17 +22,17 @@ export async function ensureOwner(u:any){
  ]);
 }
 export async function member(){
- const u=await getChatGPTUser();assert(u,'Đăng nhập để tiếp tục.',401);
+ const u=await getAppUser();assert(u,'Đăng nhập để tiếp tục.',401);
  await ensureOwner(u);
  const m=await one('SELECT * FROM members WHERE email=?',u.email.toLowerCase());
  assert(m&&m.active,'Tài khoản chưa được điều phối viên cấp quyền.',403);
  assert(!m.user_id||m.user_id===u.userId,'Danh tính tài khoản không khớp.',403);
- if(!m.user_id)await run('UPDATE members SET user_id=? WHERE email=? AND user_id IS NULL',u.userId,m.email);
+ if(!m.user_id){await run('UPDATE members SET user_id=? WHERE email=? AND user_id IS NULL',u.userId,m.email);const bound=await one('SELECT user_id FROM members WHERE email=?',m.email);assert(bound?.user_id===u.userId,'Danh tính tài khoản không khớp.',403)}
  return {...m,user_id:u.userId};
 }
 export function permit(m:any,...roles:string[]){assert(roles.includes(m.role),'Bạn không có quyền thực hiện thao tác này.',403)}
 export const json=(x:any,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-export function fail(e:any){return json({error:e instanceof AppError?e.message:'Thao tác chưa hoàn tất. Hãy thử lại hoặc báo điều phối viên.'},e instanceof AppError?e.status:500)}
+export function fail(e:any){if(!(e instanceof AppError))console.error('Workflow failure',{name:e?.name,code:e?.code});return json({error:e instanceof AppError?e.message:'Thao tác chưa hoàn tất. Hãy thử lại hoặc báo điều phối viên.'},e instanceof AppError?e.status:500)}
 export async function body(req:Request){
  const text=await req.text();assert(text.length<=2000000,'Yêu cầu quá lớn.',413);
  const origin=req.headers.get('origin');assert(!origin||origin===new URL(req.url).origin,'Nguồn yêu cầu không hợp lệ.',403);

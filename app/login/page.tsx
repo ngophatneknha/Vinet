@@ -1,0 +1,16 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {getSettings,login,oauthLogin,requestPasswordRecovery,signup,type Settings} from '@netlify/identity';
+import {Layers3} from 'lucide-react';
+import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
+export default function Login(){
+ const [settings,setSettings]=useState<Settings|null>(null),[mode,setMode]=useState('login'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ useEffect(()=>{getSettings().then(setSettings).catch(()=>setError('Chưa kết nối dịch vụ đăng nhập. Điều phối viên cần bật Netlify Identity cho website.'))},[]);
+ async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');setNotice('');const f=new FormData(e.currentTarget),email=String(f.get('email')),password=String(f.get('password')||'');try{
+  if(mode==='recover'){await requestPasswordRecovery(email);setNotice('Nếu email hợp lệ, bạn sẽ nhận được liên kết khôi phục.')}
+  else if(mode==='signup'){await signup(email,password,{full_name:String(f.get('name')||'')});setNotice('Kiểm tra email để xác nhận tài khoản. Điều phối viên vẫn cần cấp quyền xem dữ liệu.')}
+  else{await login(email,password);const target=new URLSearchParams(location.search).get('return_to');window.location.assign(target?.startsWith('/')&&!target.startsWith('//')?target:'/studio')}
+ }catch{setError(mode==='login'?'Email, mật khẩu hoặc trạng thái xác nhận chưa hợp lệ.':'Không thể hoàn tất. Kiểm tra thông tin hoặc liên hệ điều phối viên.')}finally{setBusy(false)}}
+ return <main className="onboarding"><Layers3 size={36}/><h1>ViNews Studio</h1><p>{mode==='login'?'Đăng nhập để kiểm duyệt và gán nhãn cùng nhóm.':mode==='signup'?'Tạo tài khoản, sau đó chờ điều phối viên cấp quyền.':'Nhận liên kết đặt lại mật khẩu qua email.'}</p>{error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="success" role="status">{notice}</p>}<form onSubmit={submit}>{mode==='signup'&&<label className="field">Họ tên<Input name="name" autoComplete="name" required/></label>}<label className="field">Email<Input name="email" type="email" autoComplete="email" required/></label>{mode!=='recover'&&<label className="field">Mật khẩu<Input name="password" type="password" autoComplete={mode==='signup'?'new-password':'current-password'} minLength={mode==='signup'?12:undefined} required/></label>}<Button type="submit" disabled={busy||!settings}>{mode==='login'?'Đăng nhập':mode==='signup'?'Tạo tài khoản':'Gửi liên kết khôi phục'}</Button></form>{mode==='login'&&<div className="actions">{settings?.providers.google&&<Button variant="outline" onClick={()=>oauthLogin('google')}>Google</Button>}{settings?.providers.github&&<Button variant="outline" onClick={()=>oauthLogin('github')}>GitHub</Button>}</div>}<div className="actions">{mode!=='login'&&<Button variant="ghost" onClick={()=>setMode('login')}>Đăng nhập</Button>}{mode==='login'&&<Button variant="ghost" onClick={()=>setMode('recover')}>Quên mật khẩu</Button>}{mode!=='signup'&&settings&&!settings.disableSignup&&<Button variant="ghost" onClick={()=>setMode('signup')}>Tạo tài khoản</Button>}</div><p className="muted">Chỉ thành viên được cấp quyền mới truy cập được bài báo, ảnh và kết quả gán nhãn.</p></main>;
+}
