@@ -2,6 +2,7 @@ import {getAppUser} from '@/lib/auth';
 import {database} from '@/lib/database';
 import {storage} from '@/lib/storage';
 import {bindMemberIdentity} from '@/lib/member-identity';
+import {isAllowedRequestOrigin} from '@/lib/request-origin';
 export const db=()=>database;
 export const files=()=>storage;
 export const config=()=>process.env as Record<string,string>;
@@ -36,7 +37,7 @@ export const json=(x:any,status=200)=>Response.json(x,{status,headers:{'Cache-Co
 export function fail(e:any){if(!(e instanceof AppError))console.error('Workflow failure',{name:e?.name,code:e?.code});return json({error:e instanceof AppError?e.message:'Thao tác chưa hoàn tất. Hãy thử lại hoặc báo điều phối viên.'},e instanceof AppError?e.status:500)}
 export async function body(req:Request){
  const text=await req.text();assert(text.length<=2000000,'Yêu cầu quá lớn.',413);
- const origin=req.headers.get('origin');assert(!origin||origin===new URL(req.url).origin,'Nguồn yêu cầu không hợp lệ.',403);
+ assert(isAllowedRequestOrigin(req,JSON.parse(process.env.VINEWS_REQUEST_ORIGINS||'[]')),'Nguồn yêu cầu không hợp lệ.',403);
  assert(req.headers.get('content-type')?.includes('application/json'),'Yêu cầu JSON.');
  try{return JSON.parse(text)}catch{throw new AppError(400,'JSON không hợp lệ.')}
 }
