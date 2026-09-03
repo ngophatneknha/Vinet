@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { pgTable, text, integer, index, uniqueIndex } from 'drizzle-orm/pg-core';
-export const members=pgTable('members',{email:text().primaryKey(),user_id:text().unique(),name:text().notNull(),role:text().notNull(),active:integer().notNull().default(1),created:text().notNull()});
+export const members=pgTable('members',{email:text().primaryKey(),user_id:text().unique(),auth_subject:text().unique(),name:text().notNull(),role:text().notNull(),active:integer().notNull().default(1),created:text().notNull()});
 export const settings=pgTable('settings',{key:text().primaryKey(),value:text().notNull()});
 export const articles=pgTable('articles',{id:text().primaryKey(),publisher:text().notNull(),headline:text().notNull(),topic:text(),date:text(),payload:text().notNull(),status:text().notNull().default('pending'),lease_user:text(),event_id:text(),inventory_flag:integer().notNull().default(0)},t=>[index('article_status').on(t.status,t.publisher,t.id)]);
 export const assets=pgTable('assets',{id:text().primaryKey(),format:text().notNull(),ready:integer().notNull().default(0),bytes:integer().notNull().default(0)});

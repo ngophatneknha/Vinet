@@ -13,7 +13,7 @@
     "test": "tsx --test tests/*.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
-    "build:netlify": "npm run db:migrate && npm run build"
+    "build:netlify": "npm run db:migrate && node scripts/restore-dataset.mjs && npm run build"
   },
   "dependencies": {
     "react": "19.2.6",

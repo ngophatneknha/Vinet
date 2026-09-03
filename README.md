@@ -87,6 +87,10 @@ Khi đổi schema: sửa `db/schema.ts`, chạy `npm run db:generate`, kiểm tr
 
 ## Sao lưu và vận hành
 
+Khi chuyển sang một project có Identity mới, giữ nguyên `members.user_id` để bảo toàn người duyệt, nhiệm vụ đang nhận và lịch sử. Cột `auth_subject` lưu danh tính đăng nhập của project hiện tại. Bản chuyển dữ liệu đặt cột này thành `null`; lần đăng nhập đầu tiên của đúng email thành viên đang hoạt động sẽ liên kết danh tính mới. Migration trên project đang chạy giữ nguyên danh tính đã liên kết.
+
+`scripts/restore-dataset.mjs` hỗ trợ khôi phục bộ 5.000 bài vào database mới trong lúc build. Chỉ chạy khi có `VINEWS_RESTORE_SHA256`; gói dữ liệu và dấu hoàn tất ảnh nằm trong Blob store riêng `vinews-migration`. Script kiểm tra SHA-256, project đích, đủ ảnh và database trống, sau đó nhập toàn bộ trong một transaction. Build lặp lại giữ nguyên tiến độ đã có. Xóa biến khôi phục sau khi xác minh hoàn tất; không đưa gói dữ liệu vào Git.
+
 Giữ nguyên bộ raw trên ổ D. Xuất cả ba loại JSONL định kỳ, giữ bản sao ảnh riêng và dùng snapshot database khi cần. Chốt/tạm dừng đợt trong lúc xuất bản dữ liệu nghiên cứu để tránh thay đổi nhãn giữa các trang xuất. Kiểm tra hạn mức lưu trữ/băng thông Netlify cho khoảng 24 GB ảnh trước khi tải toàn bộ; mã nguồn không cam kết dung lượng này miễn phí.
 
 Tài liệu nền tảng: [Next.js trên Netlify](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/), [Database](https://docs.netlify.com/build/data-and-storage/netlify-database/api/), [Identity](https://docs.netlify.com/manage/security/secure-access-to-sites/identity/get-started/), [Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/).

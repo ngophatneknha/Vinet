@@ -1,6 +1,7 @@
 import {getAppUser} from '@/lib/auth';
 import {database} from '@/lib/database';
 import {storage} from '@/lib/storage';
+import {bindMemberIdentity} from '@/lib/member-identity';
 export const db=()=>database;
 export const files=()=>storage;
 export const config=()=>process.env as Record<string,string>;
@@ -26,9 +27,9 @@ export async function member(){
  await ensureOwner(u);
  const m=await one('SELECT * FROM members WHERE email=?',u.email.toLowerCase());
  assert(m&&m.active,'Tài khoản chưa được điều phối viên cấp quyền.',403);
- assert(!m.user_id||m.user_id===u.userId,'Danh tính tài khoản không khớp.',403);
- if(!m.user_id){await run('UPDATE members SET user_id=? WHERE email=? AND user_id IS NULL',u.userId,m.email);const bound=await one('SELECT user_id FROM members WHERE email=?',m.email);assert(bound?.user_id===u.userId,'Danh tính tài khoản không khớp.',403)}
- return {...m,user_id:u.userId};
+ const bound=await bindMemberIdentity(db(),m.email,u.userId);
+ assert(bound,'Danh tính tài khoản không khớp.',403);
+ return bound;
 }
 export function permit(m:any,...roles:string[]){assert(roles.includes(m.role),'Bạn không có quyền thực hiện thao tác này.',403)}
 export const json=(x:any,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
