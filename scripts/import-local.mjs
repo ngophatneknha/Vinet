@@ -12,7 +12,7 @@ import {getStore} from '@netlify/blobs';
 const {values:o}=parseArgs({options:{manifest:{type:'string'},root:{type:'string'},site:{type:'string'},report:{type:'string'},workers:{type:'string',default:'12'},staged:{type:'string'},'verify-only':{type:'boolean',default:false}}});
 const check=(ok,message)=>{if(!ok)throw Error(message)};
 check(o.manifest&&o.root&&o.site&&o.report,'Require --manifest --root --site --report');
-check(o.site==='55fe495c-e7dd-48e1-8be9-a1075f97e863','This importer is scoped to the Vinet production project');
+check(o.site==='3dae70d5-f7f6-4a65-bad0-cf96bad5c08c','This importer is scoped to vinet-annotation in the ngophat031 team');
 check(process.env.NETLIFY_AUTH_TOKEN&&process.env.DATABASE_URL&&process.env.VINEWS_IMPORT_TOKEN,'Missing credentials in environment');
 const root=resolve(o.root),started=new Date().toISOString();
 const flags=JSON.parse(await readFile(new URL('../lib/inventory-flags.json',import.meta.url),'utf8'));
@@ -42,7 +42,7 @@ console.log(JSON.stringify({phase:'validated',articles:articles.length,occurrenc
 
 const pool=getDatabase({connectionString:process.env.DATABASE_URL}).pool;
 const store=getStore({name:'vinews-images',siteID:o.site,token:process.env.NETLIFY_AUTH_TOKEN,consistency:'strong'});
-const base='https://vinet-studio.netlify.app';
+const base='https://vinet-annotation.netlify.app';
 const staged=new Set(o.staged?(await readFile(o.staged,'utf8')).split('\n').filter(Boolean).map(line=>JSON.parse(line).id):[]);
 const progress={started,site_id:o.site,phase:'metadata',articles_expected:articles.length,images_expected:occurrences,assets_expected:assets.size,bytes_expected:expectedBytes,metadata_processed:0,uploaded_this_run:0,bytes_this_run:0,failed:[]};
 let stopped=false;process.on('SIGINT',()=>{stopped=true});

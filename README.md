@@ -4,9 +4,10 @@
 
 ## Dự án đang sử dụng
 
-- Website: https://vinet-studio.netlify.app
+- Website: https://vinet-annotation.netlify.app
 - Mã nguồn: https://github.com/ngophatneknha/Vinet
-- Quản lý deploy: https://app.netlify.com/projects/vinet-studio/deploys
+- Quản lý deploy: https://app.netlify.com/projects/vinet-annotation/deploys
+- Team Netlify: `ngophat031`. Project ID: `3dae70d5-f7f6-4a65-bad0-cf96bad5c08c`.
 - Nhánh phát hành: `main`. Netlify đã liên kết repository; không cần tạo lại project.
 
 Sửa file trên GitHub, chọn **Commit changes** vào `main`, rồi xem tiến trình tại trang deploy. Chỉ bản build thành công mới thay website đang chạy. Bộ raw được nhập riêng sau khi đăng nhập quản trị; không nằm trong GitHub.
@@ -21,6 +22,8 @@ Sửa file trên GitHub, chọn **Commit changes** vào `main`, rồi xem tiến
 6. Đăng nhập bằng email `OWNER_EMAIL`: hệ thống cấp quyền điều phối viên lần đầu. Thêm thành viên, nhập dữ liệu và mở đợt pilot.
 
 Sau khi liên kết repository, sửa file bằng nút bút chì trên GitHub hoặc nhấn `.` để mở github.dev, rồi **Commit changes** vào `main`. Netlify tự build và phát hành thay đổi. GitHub Actions chạy kiểm tra mã và nghiệp vụ trên mỗi push/PR. Với thay đổi lớn, dùng branch + Pull Request để xem Deploy Preview trước khi merge.
+
+Bản vận hành hiện tại giới hạn 5.000 bài và toàn bộ ảnh đi kèm. Chỉ mở rộng lên bộ 25.000 bài khi điều phối viên quyết định; script `import-local.mjs` bên dưới dành cho lần mở rộng đó.
 
 **Chạy ứng dụng trong GitHub:** dùng **Code → Codespaces → Create codespace**, rồi `npm run dev`. github.dev là trình chỉnh sửa, không phải máy chủ chạy ứng dụng. Các chức năng dữ liệu/đăng nhập cần Netlify Dev hoặc cấu hình dịch vụ tương ứng; không có tài khoản hay dữ liệu giả được tự cấp quyền khi chạy local.
 
