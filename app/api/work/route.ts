@@ -1,5 +1,6 @@
 import {CLAIM_RAW,CLAIM_PAIR,RECONCILE_PAIR} from '@/lib/workflow-sql';
 import {getAppUser} from '@/lib/auth';
+import {createManualPair,validateManualPair} from '@/lib/manual-pairs';
 import {agreement,validateAnnotation,LABELS,RAW_LABELS} from '@/lib/rules';
 import {db,stmt,one,all,run,now,uid,member,permit,json,fail,body,assert,AppError,logStmt,article,pairView,config,ensureOwner} from '@/lib/server';
 export const dynamic='force-dynamic';
@@ -12,6 +13,15 @@ export async function GET(req:Request){try{
   return json({user:u,member:m?.active?m:null,setup});
  }
  const m=await member();
+ if(action==='pair_candidates'){
+  const q=(url.searchParams.get('q')||'').slice(0,200),page=Math.max(0,Math.min(10000,Math.floor(Number(url.searchParams.get('page'))||0)));
+  return json(await all(`SELECT a.id,a.headline,a.publisher,a.date,a.event_id,a.topic FROM articles a WHERE a.status='approved' AND (a.headline ILIKE ? OR a.id=?) AND EXISTS(SELECT 1 FROM images i JOIN assets s ON s.id=i.asset_id WHERE i.article_id=a.id AND i.decision='keep' AND s.ready=1) ORDER BY a.id LIMIT 20 OFFSET ?`,`%${q}%`,q,page*20));
+ }
+ if(action==='pair_source'){
+  const a=await article(url.searchParams.get('id')||'');assert(a.status==='approved','Chỉ chọn bài đã duyệt đạt.',409);
+  return json({id:a.id,headline:a.headline,publisher:a.publisher,date:a.date,event_id:a.event_id,payload:a.payload,images:a.images.filter((i:any)=>i.decision==='keep'&&i.ready)});
+ }
+ if(action==='manual_pairs')return json(await all(`SELECT p.id,p.state,p.final_label,a.headline,n.state annotation_state,h.strategy,h.created FROM manual_pair_proposals h JOIN pairs p ON p.id=h.pair_id JOIN articles a ON a.id=p.article_id LEFT JOIN annotations n ON n.pair_id=p.id AND n.user_id=? AND n.state!='released' WHERE h.created_by=? ORDER BY h.created DESC LIMIT 40`,m.user_id,m.user_id));
  if(action==='stats'){
   const groups=await all('SELECT status,COUNT(*) n FROM articles GROUP BY status');
   const sources=await all('SELECT publisher,COUNT(*) n,SUM(CASE WHEN status=\'approved\' THEN 1 ELSE 0 END) done FROM articles GROUP BY publisher ORDER BY n DESC');
@@ -87,6 +97,12 @@ export async function POST(req:Request){try{
    try{own=await stmt(CLAIM_PAIR,uid(),m.user_id,now(),m.user_id).first();break}catch(e){if(i===2)throw e}
   }}
   if(own)await logStmt(m.user_id,'pair_claim',own.pair_id).run();return json(own?await pairView(own.pair_id,m):null);
+ }
+ if(action==='manual_pair_create'){
+  try{validateManualPair(x)}catch(e:any){throw new AppError(400,e.message)}
+  const id=await createManualPair(db(),x,m.user_id);
+  assert(id,'Không tạo được: cặp đã tồn tại, đợt đã đóng, hai phía chưa duyệt/có mã sự kiện, cùng sự kiện hoặc ảnh đã có trong bài văn bản. Kiểm tra và chọn lại.',409);
+  return json(await pairView(id,m));
  }
  if(action==='pair_save'||action==='pair_submit'){
   const own=await one("SELECT * FROM annotations WHERE pair_id=? AND user_id=? AND state='draft'",x.id,m.user_id);assert(own,'Không có bản nháp được giao.',409);

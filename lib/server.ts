@@ -53,5 +53,6 @@ export async function pairView(id:string,m:any){
  const i=await one('SELECT i.*,s.ready FROM images i JOIN assets s ON s.id=i.asset_id WHERE i.id=?',p.image_id);
  const source=await one('SELECT payload,event_id FROM articles WHERE id=?',i.article_id);
  const third=!own&&['admin','reviewer'].includes(m.role)&&p.state==='review';
- return {...p,article:a,image:{...i,payload:JSON.parse(i.payload)},source:JSON.parse(source.payload),own:own?{...own,payload:JSON.parse(own.payload)}:null,reviews:third?(await all("SELECT user_id,label,payload FROM annotations WHERE pair_id=? AND state='submitted'",id)).map(r=>({...r,payload:JSON.parse(r.payload)})):[]};
+ const proposal=await one('SELECT strategy,reason,evidence FROM manual_pair_proposals WHERE pair_id=? AND created_by=?',id,m.user_id);
+ return {...p,own_proposal:proposal?{...proposal,evidence:JSON.parse(proposal.evidence)}:null,article:a,image:{...i,payload:JSON.parse(i.payload)},source:JSON.parse(source.payload),own:own?{...own,payload:JSON.parse(own.payload)}:null,reviews:third?(await all("SELECT user_id,label,payload FROM annotations WHERE pair_id=? AND state='submitted'",id)).map(r=>({...r,payload:JSON.parse(r.payload)})):[]};
 }

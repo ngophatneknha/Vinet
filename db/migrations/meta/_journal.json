@@ -15,6 +15,13 @@
       "when": 1788426409456,
       "tag": "0001_identity_subject",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788429431225,
+      "tag": "0002_manual_hard_negatives",
+      "breakpoints": true
     }
   ]
 }
