@@ -38,6 +38,8 @@ Chọn `manifest_import_25000.jsonl.gz` đã kèm cờ kiểm tra và thư mục
 
 Mỗi ảnh được chia thành phần tối đa **4 MB** để phù hợp giới hạn upload của Netlify Functions. Máy chủ ghép lại, kiểm tra định dạng và SHA-256, rồi mới ghi trạng thái sẵn sàng. Giới hạn ảnh 20 MB phù hợp bộ raw hiện tại (ảnh lớn nhất khoảng 19,9 MB). Nếu gián đoạn, chọn lại tệp và tiếp tục; bài và ảnh đã hoàn tất được bỏ qua. Giữ tab mở khi nhập/xuất dữ liệu.
 
+Với bộ raw lớn trên máy quản trị, `scripts/import-local.mjs` hỗ trợ nhập tiếp qua chính API production. Script kiểm tra đủ 25.000 bài, 64.686 bản ghi ảnh và 61.456 tệp, bỏ qua phần đã nhập, tải ảnh theo từng phần khi cần và đối soát kho Blobs khi kết thúc. Cần cung cấp `VINEWS_IMPORT_TOKEN`, `NETLIFY_AUTH_TOKEN` và `DATABASE_URL` qua biến môi trường; kết nối database chỉ dùng để đọc và đối soát. Không lưu các khóa vào GitHub. Thu hồi khóa nhập sau khi tải xong.
+
 305 bài đang thiếu kho ảnh bị chặn duyệt đạt ở vòng đầu. Điều phối viên có thể nhập bổ sung ảnh vào bài chưa giao/đang kiểm định. Người kiểm định phải đối chiếu đầy đủ, kiểm tra số ảnh còn thiếu và ghi bằng chứng trước khi duyệt đạt.
 
 ### Quy trình nhóm
