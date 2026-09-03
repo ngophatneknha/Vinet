@@ -1,4 +1,4 @@
-import {getStore} from '@netlify/blobs';
+import {readFile} from 'node:fs/promises';
 import {getDatabase} from '@netlify/database';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -19,10 +19,9 @@ try{
   if(prior.rows[0].value!==expected)throw Error('A different dataset has already been restored');
   console.log('Dataset already restored; keeping current progress.');
  }else{
-  const store=getStore({name:'vinews-migration',consistency:'strong'});
-  const ready=await store.get('ready_5000.json',{type:'json'});
+  const ready=JSON.parse(await readFile('.netlify/migration-restore/ready_5000.json','utf8'));
   if(!ready||ready.destination_site_id!==process.env.SITE_ID||ready.package_sha256!==expected||ready.uploaded_assets!==ready.assets||ready.articles!==5000)throw Error('Image upload has not completed for this site');
-  const archive=Buffer.from(await store.get('restore_5000.json.gz',{type:'arrayBuffer'}));
+  const archive=await readFile('.netlify/migration-restore/restore_5000.json.gz');
   if(createHash('sha256').update(archive).digest('hex')!==expected)throw Error('Restore package checksum mismatch');
   const data=JSON.parse(gunzipSync(archive));
   if(data.version!==1||data.destination_site_id!==process.env.SITE_ID||data.tables.articles.length!==5000||data.tables.assets.length!==ready.assets)throw Error('Wrong dataset or destination');
